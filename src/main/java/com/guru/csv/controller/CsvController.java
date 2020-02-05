@@ -4,38 +4,36 @@ import com.guru.csv.csvbind.CSVCarModel;
 import com.guru.csv.model.CarModel;
 import com.guru.csv.parser.CSVParser;
 import com.guru.csv.repository.CarModelRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 public class CsvController {
 
-    private  CSVParser csvParser;
+    private final CSVParser csvParser;
 
-
-    private CarModelRepository carModelRepository;
+    private final CarModelRepository carModelRepository;
 
     public CsvController(CSVParser csvParser, CarModelRepository carModelRepository) {
         this.csvParser = csvParser;
         this.carModelRepository = carModelRepository;
     }
-    public CsvController() {
-
-    }
 
     @GetMapping(value = "upload")
     public String upload() throws FileNotFoundException {
         String fileName = "final_data_processed.csv";
-        ClassLoader classLoader = new CsvController().getClass().getClassLoader();
+        ClassLoader classLoader = CsvController.class.getClassLoader();
 
-        File file = new File(classLoader.getResource(fileName).getFile());
+        File file = new File(Objects.requireNonNull(classLoader.getResource(fileName)).getFile());
         List<CSVCarModel> csvCarModels = csvParser.parse(file);
         List<CarModel> carModels = csvParser.buildEntity(csvCarModels);
-        carModelRepository.save(carModels);
+        carModels.parallelStream().forEach(carModelRepository::save);
         return "success" + carModels.size();
     }
 }
